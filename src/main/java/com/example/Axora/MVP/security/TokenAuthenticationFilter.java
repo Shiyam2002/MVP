@@ -31,7 +31,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         try{
             getJwtFromRequest(request)
-                    .flatMap(tokenProvider::validateTokenAndGetJws)
+                    .flatMap(tokenProvider::validateAccessToken)
                     .ifPresent(jws -> {
                         String username = jws.getPayload().getSubject();
                         UserDetails userDetails = userDetailsService.loadUserByUsername(username);

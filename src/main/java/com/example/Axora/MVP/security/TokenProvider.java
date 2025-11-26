@@ -29,15 +29,18 @@ public class TokenProvider {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    @Value("${app.jwt.expiration.minutes}")
-    private Long jwtExpirationMinutes;
+    @Value("${app.access.expiration.minutes}")
+    private Long accessExpirationMinutes;
+
+    @Value("${app.refresh.expiration.days}")
+    private Long refreshExpirationDays;
 
     private SecretKey getSigningKey() {
         // Proper HS512 secure key handling
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
 
-    public String generate(Authentication authentication) {
+    public String generateAccessToken(Authentication authentication) {
 
         CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
 
@@ -48,29 +51,36 @@ public class TokenProvider {
         Instant now = Instant.now();
 
         return Jwts.builder()
-                .header().add("typ", TOKEN_TYPE)
+                .header().add("typ", ACCESS_TOKEN_TYPE)
                 .and()
                 .id(UUID.randomUUID().toString())
                 .issuer(TOKEN_ISSUER)
                 .audience().add(TOKEN_AUDIENCE)
                 .and()
-                .subject(user.getUsername())
+                .subject(String.valueOf(user.getId()))
+                .claim("username", user.getUsername())
                 .claim("roles", roles)
                 .claim("email", user.getEmail())
                 .claim("username", user.getUsername())
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(jwtExpirationMinutes * 60)))
+                .expiration(Date.from(now.plusSeconds(accessExpirationMinutes * 60)))
                 .signWith(getSigningKey(), Jwts.SIG.HS512)
                 .compact();
     }
 
 
-    public Optional<Jws<Claims>> validateTokenAndGetJws(String token) {
+    public Optional<Jws<Claims>> validateAccessToken(String token) {
         try {
             Jws<Claims> jws = Jwts.parser()
                     .verifyWith(getSigningKey())
                     .build()
                     .parseSignedClaims(token);
+
+            if (!ACCESS_TOKEN_TYPE.equals(jws.getHeader().get("typ"))) {
+                log.warn("❌ Not an access token");
+                return Optional.empty();
+            }
+
 
             return Optional.of(jws);
 
@@ -89,7 +99,60 @@ public class TokenProvider {
         return Optional.empty();
     }
 
-    public static final String TOKEN_TYPE = "JWT";
+
+    public String generateRefreshToken(String userId) {
+
+        Instant now = Instant.now();
+
+        return Jwts.builder()
+                .header().add("typ", REFRESH_TOKEN_TYPE)
+                .and()
+                .id(UUID.randomUUID().toString())
+                .issuer(TOKEN_ISSUER)
+                .subject(userId)
+                .claim("type", "refresh")
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(refreshExpirationDays * 24 * 60 * 60)))
+                .signWith(getSigningKey(), Jwts.SIG.HS512)
+                .compact();
+    }
+
+    public Optional<Jws<Claims>> validateRefreshToken(String token) {
+        try {
+            Jws<Claims> jws = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token);
+
+            if (!REFRESH_TOKEN_TYPE.equals(jws.getHeader().get("typ"))) {
+                log.warn("❌ Header type is not refresh");
+                return Optional.empty();
+            }
+
+            // ❗ Reject if not a refresh token
+            if (!"refresh".equals(jws.getPayload().get("type"))) {
+                log.warn("❌ Token is not a refresh token");
+                return Optional.empty();
+            }
+
+            return Optional.of(jws);
+
+        } catch (ExpiredJwtException e) {
+            log.warn("❌ Refresh Token expired: {}", e.getMessage());
+        } catch (UnsupportedJwtException | MalformedJwtException | SignatureException |
+                 IllegalArgumentException e) {
+            log.warn("❌ Invalid Refresh Token: {}", e.getMessage());
+        }
+
+        return Optional.empty();
+    }
+
+    public Long getRefreshExpirationDays() {
+        return refreshExpirationDays;
+    }
+
+    public static final String REFRESH_TOKEN_TYPE = "refresh";
+    public static final String ACCESS_TOKEN_TYPE = "JWT";
     public static final String TOKEN_ISSUER = "axora-api";
     public static final String TOKEN_AUDIENCE = "axora-app";
 }
