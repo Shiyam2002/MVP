@@ -1,7 +1,7 @@
-package com.example.Axora.MVP.user.Service;
+package com.example.Axora.MVP.security.Service;
 
 import com.example.Axora.MVP.security.TokenProvider;
-import com.example.Axora.MVP.user.Entity.User;
+import com.example.Axora.MVP.user.Entity.Account;
 import com.example.Axora.MVP.user.Entity.UserSession;
 import com.example.Axora.MVP.user.Repository.UserSessionRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +19,14 @@ public class RefreshTokenService {
     private final TokenProvider tokenProvider;
 
     // 1. Create & store a new refresh session
-    public UserSession createSession(User user, String refreshToken, String ip, String deviceInfo) {
+    public UserSession createSession(Account account, String refreshToken, String ip, String deviceInfo) {
 
-        Instant expiresAt = Instant.now().plusSeconds( tokenProvider.getRefreshExpirationDays() );
+        // Fix: convert days → seconds
+        Instant expiresAt = Instant.now()
+                .plusSeconds(tokenProvider.getRefreshExpirationDays() * 24 * 60 * 60);
 
         UserSession session = UserSession.builder()
-                .user(user)
+                .account(account) // FIXED: use account
                 .refreshToken(refreshToken)
                 .ipAddress(ip)
                 .deviceInfo(deviceInfo)
@@ -38,21 +40,20 @@ public class RefreshTokenService {
     // 2. Validate refresh token and load session
     public Optional<UserSession> validateRefreshToken(String token) {
 
-        // Validate JWT first
+        // Step 1: Validate JWT
         if (tokenProvider.validateRefreshToken(token).isEmpty()) {
             return Optional.empty();
         }
 
-        // Check DB session
-        Optional<UserSession> sessionOpt = sessionRepository.findByRefreshTokenAndRevokedFalse(token);
+        // Step 2: Check DB session
+        Optional<UserSession> sessionOpt =
+                sessionRepository.findByRefreshTokenAndRevokedFalse(token);
 
-        if (sessionOpt.isEmpty())
-            return Optional.empty();
+        if (sessionOpt.isEmpty()) return Optional.empty();
 
         UserSession session = sessionOpt.get();
 
-        if (session.isRevoked())
-            return Optional.empty();
+        if (session.isRevoked()) return Optional.empty();
 
         if (session.getExpiresAt().before(new Timestamp(System.currentTimeMillis())))
             return Optional.empty();
@@ -60,24 +61,23 @@ public class RefreshTokenService {
         return Optional.of(session);
     }
 
-
     // 3. Revoke a refresh token
     public void revokeSession(UserSession session) {
         session.setRevoked(true);
         sessionRepository.save(session);
     }
 
-    // 4. Revoke ALL user sessions (e.g., user logs out all devices)
-    public void revokeAllUserSessions(User user) {
-        sessionRepository.findByUserAndRevokedFalse(user)
+    // 4. Revoke ALL sessions for given account
+    public void revokeAllAccountSessions(Account account) {
+        sessionRepository.findByAccountAndRevokedFalse(account)
                 .forEach(s -> {
                     s.setRevoked(true);
                     sessionRepository.save(s);
                 });
     }
 
-    // 5. Extend TokenProvider for expiration
+    // 5. (Optional utility)
     public long getRefreshTokenValiditySeconds() {
-        return tokenProvider.getRefreshExpirationDays();
+        return tokenProvider.getRefreshExpirationDays() * 24 * 60 * 60;
     }
 }

@@ -9,8 +9,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "user_sessions")
 @Data
-@Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -21,8 +19,8 @@ public class UserSession {
     private UUID id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "account_id", nullable = false)
+    private Account account;
 
     private String deviceInfo;
     private String ipAddress;
@@ -33,10 +31,10 @@ public class UserSession {
     private Timestamp expiresAt;
     private boolean revoked;
 
-    private Timestamp createAt;
+    private Timestamp createdAt;
 
     @PrePersist
     public void prePersist() {
-        createAt = new Timestamp(System.currentTimeMillis());
+        createdAt = new Timestamp(System.currentTimeMillis());
     }
 }

@@ -57,16 +57,20 @@ public class TokenProvider {
                 .issuer(TOKEN_ISSUER)
                 .audience().add(TOKEN_AUDIENCE)
                 .and()
-                .subject(String.valueOf(user.getId()))
-                .claim("username", user.getUsername())
-                .claim("roles", roles)
+
+                // IMPORTANT CHANGE
+                .subject(user.getAccountId().toString())
+
+                .claim("userId", user.getUserId().toString())
                 .claim("email", user.getEmail())
-                .claim("username", user.getUsername())
+                .claim("roles", roles)
+
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(accessExpirationMinutes * 60)))
                 .signWith(getSigningKey(), Jwts.SIG.HS512)
                 .compact();
     }
+
 
 
     public Optional<Jws<Claims>> validateAccessToken(String token) {

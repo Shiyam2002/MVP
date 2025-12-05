@@ -1,5 +1,6 @@
 package com.example.Axora.MVP.security;
 
+import com.example.Axora.MVP.user.Entity.Account;
 import com.example.Axora.MVP.user.Entity.User;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
@@ -13,35 +14,40 @@ import java.util.stream.Stream;
 
 public class CustomUserDetails implements UserDetails {
 
-    private final User user;
+    private final Account account;
 
-    public CustomUserDetails(User user) {this.user = user;}
+    public CustomUserDetails(Account account) {
+        this.account = account;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return user.getRoles().stream()
-                .filter(role -> role != null)
-                .flatMap(role -> {
-                    if (role.getPermissions() == null) {
-                        return Stream.of(new SimpleGrantedAuthority(role.getName()));
-                    }
-                    return role.getPermissions().stream()
-                            .map(permission -> new SimpleGrantedAuthority(permission.getCode()));
-                })
+        return account.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(permission -> new SimpleGrantedAuthority(permission.getCode()))
                 .toList();
     }
 
+    @Override
+    public String getPassword() {
+        return account.getPasswordHash();
+    }
 
     @Override
-    public @Nullable String getPassword() { return user.getPassword(); }
+    public String getUsername() {
+        return account.getEmail(); // login by email
+    }
+
+    public UUID getAccountId() { return account.getId(); }
+
+    public UUID getUserId() { return account.getUser().getId(); }
+
+    public String getEmail() { return account.getEmail(); }
 
     @Override
-    public String getUsername() { return user.getUsername(); }
-
-    public UUID getId() { return user.getId();}
-
-    @Override
-    public boolean isAccountNonExpired() { return true; }
+    public boolean isEnabled() {
+        return account.isEmailVerified();
+    }
 
     @Override
     public boolean isAccountNonLocked() { return true; }
@@ -50,7 +56,6 @@ public class CustomUserDetails implements UserDetails {
     public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() { return user.isEmailVerified(); }
+    public boolean isAccountNonExpired() { return true; }
 
-    public String getEmail() { return user.getEmail(); }
 }

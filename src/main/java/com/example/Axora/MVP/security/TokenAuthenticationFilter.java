@@ -28,21 +28,37 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     private final TokenProvider tokenProvider;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        try{
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+
+        try {
             getJwtFromRequest(request)
                     .flatMap(tokenProvider::validateAccessToken)
                     .ifPresent(jws -> {
-                        String username = jws.getPayload().getSubject();
-                        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                        String email = jws.getPayload().get("email", String.class);
+
+                        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(
+                                        userDetails,
+                                        null,
+                                        userDetails.getAuthorities()
+                                );
+
+                        authentication.setDetails(
+                                new WebAuthenticationDetailsSource().buildDetails(request)
+                        );
+
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     });
+
         } catch (Exception e) {
             log.error("Cannot set user authentication", e);
             throw new RuntimeException(e);
         }
+
         filterChain.doFilter(request, response);
     }
 

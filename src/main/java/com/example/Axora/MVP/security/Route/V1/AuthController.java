@@ -1,47 +1,57 @@
 package com.example.Axora.MVP.security.Route.V1;
 
-import com.example.Axora.MVP.security.SecurityConfig;
 import com.example.Axora.MVP.security.TokenProvider;
 import com.example.Axora.MVP.security.dto.AuthResponse;
 import com.example.Axora.MVP.security.dto.LoginRequest;
 import com.example.Axora.MVP.security.dto.SignUpRequest;
+import com.example.Axora.MVP.user.Entity.Account;
 import com.example.Axora.MVP.user.Entity.User;
 import com.example.Axora.MVP.user.Exception.DuplicatedUserInfoException;
-import com.example.Axora.MVP.user.Service.RefreshTokenService;
+import com.example.Axora.MVP.user.Service.AccountService;
+import com.example.Axora.MVP.security.Service.RefreshTokenService;
 import com.example.Axora.MVP.user.Service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-@RequiredArgsConstructor
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/auth")
 public class AuthController {
 
     private final UserService userService;
+    private final AccountService accountService;
     private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
     private final RefreshTokenService refreshTokenService;
 
+    // ================================
+    // LOGIN (EMAIL + PASSWORD)
+    // ================================
     @PostMapping("/authenticate")
     public AuthResponse login(
             @Valid @RequestBody LoginRequest loginRequest,
             HttpServletRequest request
     ) {
-        String accessToken = authenticateAndGetToken(loginRequest.username(), loginRequest.password());
+        // Authenticate and generate access token
+        String accessToken = authenticateAndGetToken(
+                loginRequest.email(),
+                loginRequest.password()
+        );
 
-        User user = userService.findByUsername(loginRequest.username());
+        Account account = accountService.findByEmail(loginRequest.email());
 
-        String refreshToken = tokenProvider.generateRefreshToken(user.getId().toString());
+        // Generate refresh token
+        String refreshToken = tokenProvider.generateRefreshToken(account.getId().toString());
 
+        // Save login session
         refreshTokenService.createSession(
-                user,
+                account,
                 refreshToken,
                 request.getRemoteAddr(),
                 request.getHeader("User-Agent")
@@ -50,59 +60,66 @@ public class AuthController {
         return new AuthResponse(accessToken, refreshToken);
     }
 
-
+    // ================================
+    // SIGNUP
+    // ================================
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/signup")
     public AuthResponse signUp(
             @Valid @RequestBody SignUpRequest signUpRequest,
             HttpServletRequest request
     ) {
-        // ---- Check duplicates ----
+        // Check duplicates
         if (userService.hasUserWithUsername(signUpRequest.username())) {
             throw new DuplicatedUserInfoException(
-                    "Username %s already been used".formatted(signUpRequest.username())
-            );
-        }
-        if (userService.hasUserWithEmail(signUpRequest.email())) {
-            throw new DuplicatedUserInfoException(
-                    "Email %s already been used".formatted(signUpRequest.email())
-            );
+                    "Username %s already been used".formatted(signUpRequest.username()));
         }
 
-        // ---- Create and save user ----
-        User user = mapSignUpRequestToUser(signUpRequest);
+        if (accountService.hasAccountWithEmail(signUpRequest.email())) {
+            throw new DuplicatedUserInfoException(
+                    "Email %s already been used".formatted(signUpRequest.email()));
+        }
+
+        // Create User entity (profile)
+        User user = new User();
+        user.setUsername(signUpRequest.username());
         userService.saveUser(user);
 
-        // ---- Authenticate newly created user ----
-        String accessToken = authenticateAndGetToken(signUpRequest.username(), signUpRequest.password());
+        // Create Account entity (credentials)
+        Account account = new Account();
+        account.setEmail(signUpRequest.email());
+        account.setPasswordHash(signUpRequest.password()); // raw → encoded in service
+        account.setUser(user);
+        account.setEmailVerified(true);
+        accountService.saveAccount(account);
 
-        // ---- Generate refresh token ----
-        String refreshToken = tokenProvider.generateRefreshToken(user.getId().toString());
+        // Auto login newly created account
+        String accessToken = authenticateAndGetToken(
+                signUpRequest.email(),
+                signUpRequest.password()
+        );
 
-        // ---- Save session ----
+        String refreshToken = tokenProvider.generateRefreshToken(account.getId().toString());
+
         refreshTokenService.createSession(
-                user,
+                account,
                 refreshToken,
                 request.getRemoteAddr(),
                 request.getHeader("User-Agent")
         );
 
-        // ---- Return BOTH tokens ----
         return new AuthResponse(accessToken, refreshToken);
     }
 
+    // ================================
+    // Helper
+    // ================================
+    private String authenticateAndGetToken(String email, String password) {
+        Authentication authentication =
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(email, password)
+                );
 
-    private String authenticateAndGetToken(String username, String password) {
-        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
         return tokenProvider.generateAccessToken(authentication);
-    }
-
-    private User mapSignUpRequestToUser(SignUpRequest signUpRequest) {
-        User user = new User();
-        user.setUsername(signUpRequest.username());
-        user.setPassword(signUpRequest.password());  // RAW password, will be encoded by service
-        user.setEmail(signUpRequest.email());
-        user.setEmailVerified(true);
-        return user;
     }
 }
