@@ -1,4 +1,4 @@
-package com.example.Axora.MVP.user.Entity;
+package com.example.Axora.MVP.security.Entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

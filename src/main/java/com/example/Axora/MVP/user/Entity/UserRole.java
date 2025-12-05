@@ -1,5 +1,6 @@
 package com.example.Axora.MVP.user.Entity;
 
+import com.example.Axora.MVP.security.Entity.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

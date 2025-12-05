@@ -1,6 +1,6 @@
 package com.example.Axora.MVP.user.Service;
 
-import com.example.Axora.MVP.user.Entity.Role;
+import com.example.Axora.MVP.security.Entity.Role;
 import com.example.Axora.MVP.user.Entity.User;
 import com.example.Axora.MVP.user.Repository.RoleRepository;
 import com.example.Axora.MVP.user.Repository.UserRepository;
