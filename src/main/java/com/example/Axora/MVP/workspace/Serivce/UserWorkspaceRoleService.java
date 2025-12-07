@@ -37,4 +37,13 @@ public class UserWorkspaceRoleService {
         }
         return permissions;
     }
+
+    public void requireRole(UUID workspaceId, UUID userId, String... allowedRoles) {
+        Set<String> userRoles = userWorkspaceRoleRepository.findRoleNamesByWorkspaceIdAndUserId(workspaceId, userId);
+
+        for (String role : allowedRoles){
+            if(userRoles.contains(role)) return;
+        }
+        throw new RuntimeException("Access denied: insufficient workspace role");
+    }
 }

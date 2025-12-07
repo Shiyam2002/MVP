@@ -5,8 +5,6 @@ import com.example.Axora.MVP.user.Exception.UserNotFoundException;
 import com.example.Axora.MVP.user.Repository.UserRepository;
 import com.example.Axora.MVP.workspace.Entity.*;
 import com.example.Axora.MVP.workspace.Exception.Workspace.WorkspaceNotFoundException;
-import com.example.Axora.MVP.workspace.Exception.WorkspacePermission.WorkspacePermissionNotFoundException;
-import com.example.Axora.MVP.workspace.Exception.WorkspaceRole.WorkspaceRoleNotFoundException;
 import com.example.Axora.MVP.workspace.Repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

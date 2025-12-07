@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -12,4 +13,6 @@ public interface UserWorkspaceRoleRepository extends JpaRepository<UserWorkspace
     List<UserWorkspaceRole> findByWorkspaceId(UUID workspaceId);
 
     List<UserWorkspaceRole> findByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
+
+    Set<String> findRoleNamesByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
 }
