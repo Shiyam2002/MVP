@@ -6,8 +6,6 @@ import com.example.Axora.MVP.workspace.DTO.response.InvitationResponse;
 import com.example.Axora.MVP.workspace.Entity.WorkspaceInvitation;
 import com.example.Axora.MVP.workspace.Serivce.UserWorkspaceRoleService;
 import com.example.Axora.MVP.workspace.Serivce.WorkspaceInvitationService;
-import com.example.Axora.MVP.workspace.Serivce.WorkspaceRoleService;
-import com.example.Axora.MVP.workspace.Serivce.WorkspaceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

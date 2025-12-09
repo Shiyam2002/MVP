@@ -40,7 +40,7 @@ public class WorkspaceRoleService {
 
     @Transactional
     public void assignWorkspaceUserRole(UUID workspaceId, UUID userId, String roleName){
-        WorkspaceRole role = workspaceRoleRepository.findbyName(roleName);
+        WorkspaceRole role = workspaceRoleRepository.findByName(roleName);
 
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new WorkspaceNotFoundException("Workspace Not Found"));
