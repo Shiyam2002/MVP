@@ -1,4 +1,4 @@
-package com.example.Axora.MVP.user.Service;
+package com.example.Axora.MVP.user.Service.user;
 
 import com.example.Axora.MVP.user.Entity.User;
 import com.example.Axora.MVP.user.Repository.UserRepository;

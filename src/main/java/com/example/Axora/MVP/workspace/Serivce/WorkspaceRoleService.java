@@ -1,7 +1,7 @@
 package com.example.Axora.MVP.workspace.Serivce;
 
 import com.example.Axora.MVP.user.Entity.User;
-import com.example.Axora.MVP.user.Exception.UserNotFoundException;
+import com.example.Axora.MVP.user.Exception.User.UserNotFoundException;
 import com.example.Axora.MVP.user.Repository.UserRepository;
 import com.example.Axora.MVP.workspace.Entity.UserWorkspaceRole;
 import com.example.Axora.MVP.workspace.Entity.Workspace;

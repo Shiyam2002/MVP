@@ -3,6 +3,9 @@ package com.example.Axora.MVP.user.Entity;
 import com.example.Axora.MVP.security.Entity.Role;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.sql.Timestamp;
 import java.util.HashSet;
 import java.util.Set;
@@ -11,6 +14,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "accounts")
 @Data
+@Getter
+@Setter
 public class Account {
 
     @Id
@@ -30,8 +35,8 @@ public class Account {
 
     private String status; // active, disabled
 
-    private boolean emailVerified;
-    private boolean phoneVerified;
+    private Boolean emailVerified;
+    private Boolean phoneVerified;
 
     private Timestamp lastLoginAt;
 

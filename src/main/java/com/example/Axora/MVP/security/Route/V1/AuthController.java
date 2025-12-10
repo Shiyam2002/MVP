@@ -6,10 +6,10 @@ import com.example.Axora.MVP.security.dto.LoginRequest;
 import com.example.Axora.MVP.security.dto.SignUpRequest;
 import com.example.Axora.MVP.user.Entity.Account;
 import com.example.Axora.MVP.user.Entity.User;
-import com.example.Axora.MVP.user.Exception.DuplicatedUserInfoException;
-import com.example.Axora.MVP.user.Service.AccountService;
+import com.example.Axora.MVP.user.Exception.User.DuplicatedUserInfoException;
+import com.example.Axora.MVP.user.Service.account.AccountService;
 import com.example.Axora.MVP.security.Service.RefreshTokenService;
-import com.example.Axora.MVP.user.Service.UserService;
+import com.example.Axora.MVP.user.Service.user.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +38,8 @@ public class AuthController {
             @Valid @RequestBody LoginRequest loginRequest,
             HttpServletRequest request
     ) {
+        String email = normalizeEmail(loginRequest.email());
+
         // Authenticate and generate access token
         String accessToken = authenticateAndGetToken(
                 loginRequest.email(),
@@ -121,5 +123,9 @@ public class AuthController {
                 );
 
         return tokenProvider.generateAccessToken(authentication);
+    }
+
+    private String normalizeEmail(String email){
+        return email == null ? null : email.trim().toLowerCase();
     }
 }
