@@ -20,13 +20,15 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
 
-
+    // -------------------------------------------------------------------------
+    // FINDERS
+    // -------------------------------------------------------------------------
     @Override
     public Account findByEmail(String email) {
         return accountRepository.findByEmail(email.trim().toLowerCase())
-                .orElseThrow(() -> new AccountNotFoundException(
-                        "Account with email %s not found".formatted(email)
-                ));
+                .orElseThrow(() ->
+                        new AccountNotFoundException("Account with email %s not found".formatted(email))
+                );
     }
 
     @Override
@@ -40,7 +42,9 @@ public class AccountServiceImpl implements AccountService {
         return accountRepository.existsByEmail(email.trim().toLowerCase());
     }
 
-
+    // -------------------------------------------------------------------------
+    // CREATE ACCOUNT
+    // -------------------------------------------------------------------------
     @Override
     @Transactional
     public Account createAccount(Account account) {
@@ -55,13 +59,13 @@ public class AccountServiceImpl implements AccountService {
             account.setPhone(normalizePhone(account.getPhone()));
         }
 
-        // Encode password if raw
+        // Encode password only if raw
         String rawPassword = account.getPasswordHash();
         if (rawPassword != null && !isBCryptHash(rawPassword)) {
             account.setPasswordHash(passwordEncoder.encode(rawPassword));
         }
 
-        // Defaults
+        // Default values
         if (account.getStatus() == null) account.setStatus("active");
         if (account.getEmailVerified() == null) account.setEmailVerified(false);
         if (account.getPhoneVerified() == null) account.setPhoneVerified(false);
@@ -71,13 +75,16 @@ public class AccountServiceImpl implements AccountService {
         return accountRepository.save(account);
     }
 
+    // -------------------------------------------------------------------------
+    // UPDATE ACCOUNT (PATCH)
+    // -------------------------------------------------------------------------
     @Override
     @Transactional
     public Account updateAccount(Account incoming) {
 
         Account existing = findById(incoming.getId());
 
-        // Email update
+        // ---------------- EMAIL ----------------
         if (incoming.getEmail() != null) {
             String normalized = incoming.getEmail().trim().toLowerCase();
 
@@ -89,7 +96,7 @@ public class AccountServiceImpl implements AccountService {
             existing.setEmail(normalized);
         }
 
-        // Phone update
+        // ---------------- PHONE ----------------
         if (incoming.getPhone() != null) {
             if (incoming.getPhone().isBlank()) {
                 existing.setPhone(null);
@@ -100,28 +107,31 @@ public class AccountServiceImpl implements AccountService {
             }
         }
 
-        // Password update only if provided
+        // ---------------- PASSWORD ----------------
         if (incoming.getPasswordHash() != null && !incoming.getPasswordHash().isBlank()) {
             String raw = incoming.getPasswordHash();
+
+            // Encode only if NOT a bcrypt hash
             existing.setPasswordHash(
                     isBCryptHash(raw) ? raw : passwordEncoder.encode(raw)
             );
         }
 
-        // Status
+        // ---------------- STATUS ----------------
         if (incoming.getStatus() != null) {
             existing.setStatus(incoming.getStatus());
         }
 
-        // Provider fields
+        // ---------------- PROVIDER FIELDS ----------------
         if (incoming.getAuthProvider() != null) {
             existing.setAuthProvider(incoming.getAuthProvider());
         }
+
         if (incoming.getProviderId() != null) {
             existing.setProviderId(incoming.getProviderId());
         }
 
-        // Verification flags
+        // ---------------- VERIFICATION FLAGS ----------------
         if (incoming.getEmailVerified() != null) {
             existing.setEmailVerified(incoming.getEmailVerified());
         }
@@ -130,7 +140,7 @@ public class AccountServiceImpl implements AccountService {
             existing.setPhoneVerified(incoming.getPhoneVerified());
         }
 
-        // Refresh token version
+        // ---------------- REFRESH TOKEN VERSION ----------------
         if (incoming.getRefreshTokenVersion() != null) {
             existing.setRefreshTokenVersion(incoming.getRefreshTokenVersion());
         }
@@ -138,26 +148,35 @@ public class AccountServiceImpl implements AccountService {
         return accountRepository.save(existing);
     }
 
-
+    // -------------------------------------------------------------------------
+    // UPDATE EMAIL (FORCE VERIFICATION)
+    // -------------------------------------------------------------------------
     @Override
     @Transactional
     public Account updateEmail(UUID accountId, String newEmail) {
+
         Account acc = findById(accountId);
 
         newEmail = newEmail.trim().toLowerCase();
 
-        if (!newEmail.equals(acc.getEmail()) && accountRepository.existsByEmail(newEmail)) {
+        if (!newEmail.equals(acc.getEmail())
+                && accountRepository.existsByEmail(newEmail)) {
             throw new AccountAlreadyExistException("Email already in use");
         }
 
         acc.setEmail(newEmail);
-        acc.setEmailVerified(false);  // MUST reverify email
+        acc.setEmailVerified(false); // MUST verify again
+
         return accountRepository.save(acc);
     }
 
+    // -------------------------------------------------------------------------
+    // UPDATE PASSWORD (OLD PASSWORD REQUIRED)
+    // -------------------------------------------------------------------------
     @Override
     @Transactional
     public void updatePassword(UUID accountId, String oldPassword, String newPassword) {
+
         Account acc = findById(accountId);
 
         if (!passwordEncoder.matches(oldPassword, acc.getPasswordHash())) {
@@ -168,10 +187,13 @@ public class AccountServiceImpl implements AccountService {
         accountRepository.save(acc);
     }
 
-
+    // -------------------------------------------------------------------------
+    // UPDATE PHONE NUMBER
+    // -------------------------------------------------------------------------
     @Override
     @Transactional
     public Account updatePhone(UUID id, String phone) {
+
         Account acc = findById(id);
 
         if (phone == null || phone.isBlank()) {
@@ -182,10 +204,12 @@ public class AccountServiceImpl implements AccountService {
             acc.setPhoneVerified(false);
         }
 
-        return accountRepository.save(acc);
+        return acc;
     }
 
-
+    // -------------------------------------------------------------------------
+    // ACCOUNT STATUS (DISABLE / ENABLE)
+    // -------------------------------------------------------------------------
     @Override
     @Transactional
     public void disableAccount(UUID accountId) {
@@ -202,7 +226,9 @@ public class AccountServiceImpl implements AccountService {
         accountRepository.save(acc);
     }
 
-
+    // -------------------------------------------------------------------------
+    // RBAC (ASSIGN / REMOVE ROLE)
+    // -------------------------------------------------------------------------
     @Override
     @Transactional
     public void assignRole(UUID accountId, Role role) {
@@ -219,23 +245,25 @@ public class AccountServiceImpl implements AccountService {
         accountRepository.save(acc);
     }
 
-
+    // -------------------------------------------------------------------------
+    // INVALIDATE ALL SESSIONS (LOGOUT ALL DEVICES)
+    // -------------------------------------------------------------------------
     @Override
     @Transactional
     public void invalidateAllSessions(UUID accountId) {
+
         Account acc = findById(accountId);
 
+        // increments version → all refresh tokens become invalid
         acc.setRefreshTokenVersion(acc.getRefreshTokenVersion() + 1);
         acc.setLastLoginAt(new Timestamp(System.currentTimeMillis()));
 
         accountRepository.save(acc);
     }
 
-
-    // --------------------------------------------------------
+    // -------------------------------------------------------------------------
     // HELPERS
-    // --------------------------------------------------------
-
+    // -------------------------------------------------------------------------
     private boolean isBCryptHash(String password) {
         return password.startsWith("$2a$")
                 || password.startsWith("$2b$")
@@ -243,12 +271,14 @@ public class AccountServiceImpl implements AccountService {
     }
 
     private String normalizePhone(String phone) {
+        // remove spaces, dashes, parentheses
         String cleaned = phone.replaceAll("[\\s\\-()]", "");
 
-        // Add your country-specific logic here
+        // If missing country code
         if (!cleaned.startsWith("+")) {
             cleaned = "+91" + cleaned;
         }
+
         return cleaned;
     }
 }

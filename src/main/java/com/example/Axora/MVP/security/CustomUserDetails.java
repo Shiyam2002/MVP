@@ -46,7 +46,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return account.isEmailVerified();
+        return account.getEmailVerified();
     }
 
     @Override

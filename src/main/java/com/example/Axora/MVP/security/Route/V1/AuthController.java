@@ -93,7 +93,7 @@ public class AuthController {
         account.setPasswordHash(signUpRequest.password()); // raw → encoded in service
         account.setUser(user);
         account.setEmailVerified(true);
-        accountService.saveAccount(account);
+        accountService.createAccount(account);
 
         // Auto login newly created account
         String accessToken = authenticateAndGetToken(
