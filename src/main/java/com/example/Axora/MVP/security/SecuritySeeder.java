@@ -20,9 +20,9 @@ public class SecuritySeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        seedRoles();
-        seedPermissions();
-        seedRolePermissions();
+//        seedRoles();
+//        seedPermissions();
+//        seedRolePermissions();
     }
 
     // -----------------------------------------------------------------------
