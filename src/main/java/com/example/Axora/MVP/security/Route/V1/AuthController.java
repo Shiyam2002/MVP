@@ -38,6 +38,7 @@ public class AuthController {
             @Valid @RequestBody LoginRequest loginRequest,
             HttpServletRequest request
     ) {
+        System.out.println("LOGIN CONTROLLER HIT");
         String email = normalizeEmail(loginRequest.email());
 
         // Authenticate and generate access token
