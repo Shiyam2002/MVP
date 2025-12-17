@@ -24,9 +24,9 @@ public class WorkspaceController {
     private final UserWorkspaceRoleService userWorkspaceRoleService;
 
     @PostMapping
-    public WorkspaceResponse createWorkspace(@RequestBody CreateWorkspaceRequest request,
-                                     @RequestHeader("X-USER-ID") UUID userId){
-        Workspace ws = workspaceService.createWorkspace(request.getName(), request.getDescription(), userId);
+    public WorkspaceResponse createWorkspace(@RequestBody CreateWorkspaceRequest request){
+
+        Workspace ws = workspaceService.createWorkspace(request.getName(), request.getDescription());
 
         WorkspaceResponse response = new WorkspaceResponse();
         response.setId(ws.getId());

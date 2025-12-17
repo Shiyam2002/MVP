@@ -1,5 +1,6 @@
 package com.example.Axora.MVP.workspace.Serivce;
 
+import com.example.Axora.MVP.security.SecurityUtils;
 import com.example.Axora.MVP.user.Entity.User;
 import com.example.Axora.MVP.user.Exception.User.UserNotFoundException;
 import com.example.Axora.MVP.user.Repository.UserRepository;
@@ -25,18 +26,19 @@ public class WorkspaceService {
     private final UserRepository userRepository;
 
     @Transactional
-    public Workspace createWorkspace(String name, String description, UUID owneruserID){
-        User owner = userRepository.findById(owneruserID)
-                .orElseThrow(() -> new UserNotFoundException("User Not Found with ID : "+ owneruserID));
+    public Workspace createWorkspace(String name, String description){
+
+        UUID currentUser = SecurityUtils.getCurrentUser();
+
+        User owner = userRepository.findById(currentUser)
+                .orElseThrow(() -> new UserNotFoundException("User Not Found with ID : "+ currentUser));
 
         Workspace workspace = new Workspace();
         workspace.setName(name);
         workspace.setDescription(description);
         workspace.setOwner(owner);
 
-        Workspace saved = workspaceRepository.save(workspace);
-
-        return saved;
+        return workspaceRepository.save(workspace);
     }
 
     public Optional<Workspace> getWorkspace(UUID workspaceId){
