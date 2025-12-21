@@ -6,8 +6,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -33,8 +37,9 @@ public class Workspace {
 
     private String colorTheme;
 
-    @Column(columnDefinition = "jsonb")
-    private String settingsJson;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "settings_json", columnDefinition = "jsonb")
+    private Map<String, Object> settingsJson = new HashMap<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)

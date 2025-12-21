@@ -4,8 +4,10 @@ import com.example.Axora.MVP.security.SecurityUtils;
 import com.example.Axora.MVP.user.Entity.User;
 import com.example.Axora.MVP.user.Exception.User.UserNotFoundException;
 import com.example.Axora.MVP.user.Repository.UserRepository;
+import com.example.Axora.MVP.workspace.DTO.response.WorkspaceResponse;
 import com.example.Axora.MVP.workspace.Entity.*;
 import com.example.Axora.MVP.workspace.Exception.Workspace.WorkspaceNotFoundException;
+import com.example.Axora.MVP.workspace.Mapper.WorkspaceMapper;
 import com.example.Axora.MVP.workspace.Repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,8 @@ public class WorkspaceService {
     private final UserWorkspaceRoleRepository userWorkspaceRoleRepository;
     private final UserRepository userRepository;
 
+    private final WorkspaceMapper workspaceMapper;
+
     @Transactional
     public Workspace createWorkspace(String name, String description){
 
@@ -43,6 +47,13 @@ public class WorkspaceService {
 
     public Optional<Workspace> getWorkspace(UUID workspaceId){
         return workspaceRepository.findById(workspaceId);
+    }
+
+    public List<WorkspaceResponse> getWorksapceList() {
+        return workspaceRepository.findAll()
+                .stream()
+                .map(workspaceMapper::mapToResponse)
+                .toList();
     }
 
     @Transactional
