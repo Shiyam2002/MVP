@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/workspaces")
+@RequestMapping("/api/v1/workspaces")
 public class WorkspaceController {
 
     @Autowired

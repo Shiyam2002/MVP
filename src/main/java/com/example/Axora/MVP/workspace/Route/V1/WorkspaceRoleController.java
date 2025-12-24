@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/workspace/role")
+@RequestMapping("/api/v1/workspace/role")
 public class WorkspaceRoleController {
 
     @Autowired

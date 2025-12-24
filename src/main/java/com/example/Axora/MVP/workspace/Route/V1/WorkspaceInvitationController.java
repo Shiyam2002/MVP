@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/invite")
+@RequestMapping("/api/v1/invite")
 public class WorkspaceInvitationController {
 
     @Autowired
