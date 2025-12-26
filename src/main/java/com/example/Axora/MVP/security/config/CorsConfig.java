@@ -1,4 +1,4 @@
-package com.example.Axora.MVP.security;
+package com.example.Axora.MVP.security.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
