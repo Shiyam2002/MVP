@@ -15,9 +15,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequiredArgsConstructor
@@ -38,30 +40,34 @@ public class AuthController {
             @Valid @RequestBody LoginRequest loginRequest,
             HttpServletRequest request
     ) {
-        System.out.println("LOGIN CONTROLLER HIT");
-        String email = normalizeEmail(loginRequest.email());
+        try {
+            String accessToken = authenticateAndGetToken(
+                    loginRequest.email(),
+                    loginRequest.password()
+            );
 
-        // Authenticate and generate access token
-        String accessToken = authenticateAndGetToken(
-                loginRequest.email(),
-                loginRequest.password()
-        );
+            Account account = accountService.findByEmail(loginRequest.email());
 
-        Account account = accountService.findByEmail(loginRequest.email());
+            String refreshToken =
+                    tokenProvider.generateRefreshToken(account.getId().toString());
 
-        // Generate refresh token
-        String refreshToken = tokenProvider.generateRefreshToken(account.getId().toString());
+            refreshTokenService.createSession(
+                    account,
+                    refreshToken,
+                    request.getRemoteAddr(),
+                    request.getHeader("User-Agent")
+            );
 
-        // Save login session
-        refreshTokenService.createSession(
-                account,
-                refreshToken,
-                request.getRemoteAddr(),
-                request.getHeader("User-Agent")
-        );
+            return new AuthResponse(accessToken, refreshToken);
 
-        return new AuthResponse(accessToken, refreshToken);
+        } catch (BadCredentialsException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid email or password"
+            );
+        }
     }
+
 
     // ================================
     // SIGNUP

@@ -16,4 +16,6 @@ public interface DocumentRepository
     List<Document> findByWorkspaceId(UUID workspaceId);
 
     boolean existsByWorkspaceIdAndTitle(UUID workspaceId, String title);
+
+    Object findById(UUID documentId, UUID userId);
 }

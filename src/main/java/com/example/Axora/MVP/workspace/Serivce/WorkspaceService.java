@@ -27,12 +27,14 @@ public class WorkspaceService {
     private final UserWorkspaceRoleRepository userWorkspaceRoleRepository;
     private final UserRepository userRepository;
 
+    private final SecurityUtils authUtil;
+
     private final WorkspaceMapper workspaceMapper;
 
     @Transactional
     public Workspace createWorkspace(String name, String description){
 
-        UUID currentUser = SecurityUtils.getCurrentUser();
+        UUID currentUser = authUtil.getCurrentUser();
 
         User owner = userRepository.findById(currentUser)
                 .orElseThrow(() -> new UserNotFoundException("User Not Found with ID : "+ currentUser));

@@ -9,6 +9,7 @@ import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -32,6 +33,7 @@ public class TokenProvider {
     @Value("${app.access.expiration.minutes}")
     private Long accessExpirationMinutes;
 
+    @Getter
     @Value("${app.refresh.expiration.days}")
     private Long refreshExpirationDays;
 
@@ -149,10 +151,6 @@ public class TokenProvider {
         }
 
         return Optional.empty();
-    }
-
-    public Long getRefreshExpirationDays() {
-        return refreshExpirationDays;
     }
 
     public static final String REFRESH_TOKEN_TYPE = "refresh";
