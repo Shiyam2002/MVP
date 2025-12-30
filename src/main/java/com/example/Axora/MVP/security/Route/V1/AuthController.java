@@ -11,9 +11,12 @@ import com.example.Axora.MVP.user.Service.account.AccountService;
 import com.example.Axora.MVP.security.Service.RefreshTokenService;
 import com.example.Axora.MVP.user.Service.user.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,21 +39,36 @@ public class AuthController {
     // LOGIN (EMAIL + PASSWORD)
     // ================================
     @PostMapping("/authenticate")
-    public AuthResponse login(
+    public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody LoginRequest loginRequest,
-            HttpServletRequest request
+            HttpServletRequest request,
+            HttpServletResponse response
     ) {
         try {
-            String accessToken = authenticateAndGetToken(
-                    loginRequest.email(),
-                    loginRequest.password()
-            );
+            // 1️⃣ Authenticate user
+            Authentication authentication =
+                    authenticationManager.authenticate(
+                            new UsernamePasswordAuthenticationToken(
+                                    loginRequest.email(),
+                                    loginRequest.password()
+                            )
+                    );
 
-            Account account = accountService.findByEmail(loginRequest.email());
+            // 2️⃣ Generate access token
+            String accessToken =
+                    tokenProvider.generateAccessToken(authentication);
 
+            // 3️⃣ Fetch account
+            Account account =
+                    accountService.findByEmail(loginRequest.email());
+
+            // 4️⃣ Generate refresh token
             String refreshToken =
-                    tokenProvider.generateRefreshToken(account.getId().toString());
+                    tokenProvider.generateRefreshToken(
+                            account.getId().toString()
+                    );
 
+            // 5️⃣ Store refresh session
             refreshTokenService.createSession(
                     account,
                     refreshToken,
@@ -58,7 +76,21 @@ public class AuthController {
                     request.getHeader("User-Agent")
             );
 
-            return new AuthResponse(accessToken, refreshToken);
+            // 6️⃣ Set JWT as HttpOnly cookie (🔥 REQUIRED)
+            ResponseCookie cookie = ResponseCookie.from("token", accessToken)
+                    .httpOnly(true)
+                    .secure(false)              // true in prod (HTTPS)
+                    .sameSite("Lax")            // OK for localhost
+                    .path("/")
+                    .maxAge(60 * 60)            // 1 hour
+                    .build();
+
+            response.addHeader("Set-Cookie", cookie.toString());
+
+            // 7️⃣ Return response body (optional but useful)
+            return ResponseEntity.ok(
+                    new AuthResponse(accessToken, refreshToken)
+            );
 
         } catch (BadCredentialsException ex) {
             throw new ResponseStatusException(

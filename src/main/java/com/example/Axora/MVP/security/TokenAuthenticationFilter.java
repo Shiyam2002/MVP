@@ -1,8 +1,8 @@
 package com.example.Axora.MVP.security;
 
-import ch.qos.logback.core.util.StringUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -28,18 +28,27 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
     private final TokenProvider tokenProvider;
 
+    public static final String TOKEN_HEADER = "Authorization";
+    public static final String TOKEN_PREFIX = "Bearer ";
+    public static final String TOKEN_COOKIE = "token";
+
     @Override
-    protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response,
-                                    @NotNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            @NotNull HttpServletRequest request,
+            @NotNull HttpServletResponse response,
+            @NotNull FilterChain filterChain
+    ) throws ServletException, IOException {
 
         try {
-            getJwtFromRequest(request)
+            resolveToken(request)
                     .flatMap(tokenProvider::validateAccessToken)
                     .ifPresent(jws -> {
 
+                        // 🔐 Extract user identity from JWT
                         String email = jws.getPayload().get("email", String.class);
 
-                        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                        UserDetails userDetails =
+                                userDetailsService.loadUserByUsername(email);
 
                         UsernamePasswordAuthenticationToken authentication =
                                 new UsernamePasswordAuthenticationToken(
@@ -49,28 +58,45 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                                 );
 
                         authentication.setDetails(
-                                new WebAuthenticationDetailsSource().buildDetails(request)
+                                new WebAuthenticationDetailsSource()
+                                        .buildDetails(request)
                         );
 
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        // 🔥 THIS sets the authenticated user
+                        SecurityContextHolder.getContext()
+                                .setAuthentication(authentication);
                     });
 
         } catch (Exception e) {
-            log.error("Cannot set user authentication", e);
-            throw new RuntimeException(e);
+            log.error("Failed to authenticate request", e);
+            SecurityContextHolder.clearContext();
         }
 
         filterChain.doFilter(request, response);
     }
 
-    private Optional<String> getJwtFromRequest(HttpServletRequest request){
-        String tokenHeader = request.getHeader(TOKEN_HEADER);
-        if(StringUtils.hasText(tokenHeader) && tokenHeader.startsWith(TOKEN_PREFIX)){
-            return Optional.of(tokenHeader.replace(TOKEN_PREFIX,""));
+    /* ==================================================
+       TOKEN RESOLUTION (HEADER → COOKIE FALLBACK)
+       ================================================== */
+
+    private Optional<String> resolveToken(HttpServletRequest request) {
+
+        // 1️⃣ Authorization header (Bearer token)
+        String header = request.getHeader(TOKEN_HEADER);
+        if (StringUtils.hasText(header) && header.startsWith(TOKEN_PREFIX)) {
+            return Optional.of(header.substring(TOKEN_PREFIX.length()));
         }
+
+        // 2️⃣ HttpOnly cookie (token)
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if (TOKEN_COOKIE.equals(cookie.getName())
+                        && StringUtils.hasText(cookie.getValue())) {
+                    return Optional.of(cookie.getValue());
+                }
+            }
+        }
+
         return Optional.empty();
     }
-
-    public static final String TOKEN_HEADER = "Authorization";
-    public static final String TOKEN_PREFIX = "Bearer ";
 }
