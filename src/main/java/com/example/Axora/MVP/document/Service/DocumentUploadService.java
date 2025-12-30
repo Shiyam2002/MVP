@@ -91,7 +91,13 @@ public class DocumentUploadService {
                 .version(version)
                 .fileType("original")
                 .mimeType("application/octet-stream")
-                .storageUrl("")
+                .storageUrl(
+                        String.format(
+                                "s3://%s/%s",
+                                bucket,
+                                request.getObjectKey()
+                        )
+                )
                 .checksum(request.getChecksum())
                 .build();
 
